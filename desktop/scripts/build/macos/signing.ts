@@ -45,7 +45,14 @@ function verifySignature(filePath: string, identifier?: string): void {
     const requirement = identifier
         ? `identifier "${identifier}" and ${DEVELOPER_ID_REQUIREMENT}`
         : DEVELOPER_ID_REQUIREMENT
-    run('codesign', ['--verify', '--strict', '--all-architectures', '-R', requirement, filePath])
+    run('codesign', [
+        '--verify',
+        '--strict',
+        '--all-architectures',
+        '-R',
+        `=${requirement}`,
+        filePath
+    ])
 }
 
 function notarize(filePath: string): void {

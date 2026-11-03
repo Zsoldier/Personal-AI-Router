@@ -2,6 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { execFileSync } from 'node:child_process'
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { signAsync } from '@electron/osx-sign'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { signAndNotarizeForkApp, signingOptionsForFile } from '../../scripts/build/macos/signing'
@@ -49,6 +52,31 @@ describe('fork macOS signing', () => {
         await expect(signAndNotarizeForkApp('/build/Zsoldier PAIR.app')).rejects.toThrow(
             stoppedBeforeNotarization
         )
+    })
+
+    it('passes inline Developer ID requirements to codesign rather than interpreting them as filenames', async () => {
+        vi.stubEnv('DEVELOPER_ID_APP', 'test-identity')
+        vi.stubEnv('NOTARY_PROFILE', 'test-profile')
+        vi.mocked(signAsync).mockResolvedValueOnce()
+        const appPath = mkdtempSync(join(tmpdir(), 'pair-signing-test-'))
+        try {
+            mkdirSync(join(appPath, 'Contents/Resources/cli-bin'), { recursive: true })
+
+            await signAndNotarizeForkApp(appPath)
+
+            const verifications = vi
+                .mocked(execFileSync)
+                .mock.calls.filter(call => call[0] === 'codesign' && call[1]?.includes('-R'))
+            expect(verifications).toHaveLength(3)
+            for (const [, args] of verifications) {
+                const requirement = args?.[args.indexOf('-R') + 1]
+                expect(requirement).toMatch(/^=identifier "/)
+                expect(requirement).toContain('anchor apple generic')
+                expect(requirement).toContain('certificate leaf[subject.OU] = "U8A2AFWXCM"')
+            }
+        } finally {
+            rmSync(appPath, { recursive: true, force: true })
+        }
     })
 
     it('explicitly pins the privileged helper identifier instead of inheriting the app identifier', () => {
