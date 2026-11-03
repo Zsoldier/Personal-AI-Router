@@ -6,7 +6,7 @@
         "src/ui/main.tsx",
         "scripts/*.ts",
         "electron.vite.config.ts",
-        "electron-builder.config.ts",
+        "electron-builder*.config.ts",
         "vite.renderer.config.ts",
         "eslint.config.ts",
         "tests/**/*.test.ts"

@@ -47,7 +47,7 @@ case "$APP_PATH" in
 esac
 # Bundle id used to key the macOS framework state cleaned up below (the .dmg
 # leaves no pkg receipt to forget).
-PACKAGE_ID="com.nvidia.nvpair"
+PACKAGE_ID="com.zsoldier.pair"
 
 # Removing /Applications needs root, but user data lives in the real user's home.
 # When invoked via sudo, $HOME is root's home, so resolve the invoking user's
@@ -63,31 +63,13 @@ fi
 
 APP_SUPPORT="$target_home/Library/Application Support"
 
-echo "Stopping NVIDIA PAIR processes..."
-# The app process is named by the bundle's own executable, read rather than
-# assumed for the same reason APP_PATH is.
-APP_EXECUTABLE="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP_PATH/Contents/Info.plist" 2>/dev/null || true)"
-if [ -n "$APP_EXECUTABLE" ]; then
-  pkill -TERM -x "$APP_EXECUTABLE" 2>/dev/null || true
-fi
-# Keep this list in sync with MODULAR_RUNTIME_BINARIES and
-# MODULAR_BUNDLED_BINARIES in src/shared/constants/modular-binaries.ts.
-for proc in \
-  "nvpair-tui" \
-  "nvpair-proxy" \
-  "ollama-proxy" \
-  "lmstudio-proxy" \
-  "nvpair-node-info" \
-  "nvpair-node-scanner" \
-  "nvpair-manual-nodes" \
-  "nvpair-node-settings" \
-  "nvpair-engine-manager" \
-  "nvpair-workload-manager" \
-  "nvpair-cluster-manager" \
-  "nvpair-job-scheduler" \
-  "nvpair-errors" \
-  "nvpair-ui-broker"; do
-  pkill -TERM -x "$proc" 2>/dev/null || true
+echo "Stopping Zsoldier PAIR processes..."
+ps -axo pid=,comm= | while read -r pid executable; do
+  case "$executable" in
+    "$APP_PATH/Contents/"*|"$APP_SUPPORT/Zsoldier/PAIR/"*)
+      kill -TERM "$pid" 2>/dev/null || true
+      ;;
+  esac
 done
 sleep 1
 
@@ -141,7 +123,7 @@ rm -rf "$APP_PATH" 2>/dev/null || true
 
 # The generated `nvpair` launcher points into the bundle we just deleted, so it
 # goes whether or not data is kept. See src/electron/nvpair-command.ts.
-rm -f /usr/local/bin/nvpair 2>/dev/null || true
+rm -f /usr/local/bin/zsoldier-pair 2>/dev/null || true
 
 if [ "$PURGE_DATA" != "1" ]; then
   echo "User data preserved. Re-run with --purge to remove it."
@@ -151,15 +133,11 @@ fi
 
 echo "Removing user data..."
 # Per-user data roots. Keep these names in sync with APP_ORG/APP_DATA_DIR_NAME in
-# src/shared/constants/app.ts and the Go appdir "Nvidia Corporation/Personal AI
-# Router" under Application Support. The living, append-only inventory is
+# src/shared/constants/app.ts and the Go appdir "Zsoldier/PAIR"
+# under Application Support. The living, append-only inventory is
 # scripts/wipe-app-data.sh — do not silently diverge.
-rm -rf "$APP_SUPPORT/Nvidia Corporation/Personal AI Router" 2>/dev/null || true
-rm -rf "$APP_SUPPORT/NVIDIA Corporation/PAIR" 2>/dev/null || true
-# Remove the current and previous parents only when empty so other NVIDIA
-# applications survive.
-rmdir "$APP_SUPPORT/Nvidia Corporation" 2>/dev/null || true
-rmdir "$APP_SUPPORT/NVIDIA Corporation" 2>/dev/null || true
+rm -rf "$APP_SUPPORT/Zsoldier/PAIR" 2>/dev/null || true
+rmdir "$APP_SUPPORT/Zsoldier" 2>/dev/null || true
 
 # Best-effort removal of macOS framework state keyed on the bundle id.
 rm -rf "$target_home/Library/Preferences/$PACKAGE_ID.plist" 2>/dev/null || true

@@ -9,41 +9,38 @@ import Foundation
 /// sides of the connection.
 enum HelperConstants {
     /// launchd `Label` of the daemon and the basename of its LaunchDaemon plist.
-    static let daemonLabel = "com.nvidia.nvpair.helper"
-    static let daemonPlistName = "com.nvidia.nvpair.helper.plist"
+    static let daemonLabel = "com.zsoldier.pair.privileged-helper"
+    static let daemonPlistName = "com.zsoldier.pair.privileged-helper.plist"
 
     /// Mach service the daemon vends and the control tool connects to. Must match
     /// the `MachServices` key in the LaunchDaemon plist.
-    static let machServiceName = "com.nvidia.nvpair.helper.xpc"
+    static let machServiceName = "com.zsoldier.pair.privileged-helper.xpc"
 
-    /// NVIDIA's Apple Developer Team ID and the host app's bundle id.
-    static let teamIdentifier = "6KR3T733EC"
-    static let appBundleIdentifier = "com.nvidia.nvpair"
+    /// The fork's Apple Developer Team ID and host app bundle id.
+    static let teamIdentifier = "U8A2AFWXCM"
+    static let appBundleIdentifier = "com.zsoldier.pair"
 
     /// Basenames `codesign` assigns as the signing identifier of the two loose
     /// helper Mach-O files (codesign defaults the identifier to the file name).
     static let ctlIdentifier = "nvpair-helper-ctl"
-    static let daemonIdentifier = "com.nvidia.nvpair.helper"
+    static let daemonIdentifier = "com.zsoldier.pair.privileged-helper"
 
     /// Common trust anchor clause. `anchor apple generic` proves an Apple-issued
     /// chain; the Developer ID intermediate marker (`6.2.6`) and the Developer ID
     /// Application leaf marker (`6.1.13`) prove the chain is specifically a
     /// notarization-grade Developer ID chain (not just any Apple-anchored cert,
     /// e.g. a Mac App Store or ad-hoc-into-keychain cert); the leaf OU pins
-    /// NVIDIA's Team ID. `anchor apple generic and OU = TeamID` alone was too
+    /// the fork's Team ID. `anchor apple generic and OU = TeamID` alone was too
     /// loose — any code signed under the same Team ID satisfied it.
     ///
-    /// NOTE (mac-builder): the Developer ID marker OIDs assume the 3S signing
-    /// service issues Developer ID Application certs (required for notarized
-    /// non-App-Store distribution, which PAIR uses). Verify on the mac-builder
-    /// that the shipped helpers satisfy this requirement (`codesign -R`).
+    /// Verify the shipped helpers against this full requirement after signing.
     static let developerIdAnchor =
         "anchor apple generic "
         + "and certificate 1[field.1.2.840.113635.100.6.2.6] exists "
         + "and certificate leaf[field.1.2.840.113635.100.6.1.13] exists "
         + "and certificate leaf[subject.OU] = \"\(teamIdentifier)\""
 
-    /// Requirement any NVIDIA-signed Mach-O must satisfy (no identifier pin).
+    /// Requirement any fork-signed Mach-O must satisfy (no identifier pin).
     /// Used to re-verify each individual `cli-bin` executable immediately before
     /// handing it to `socketfilterfw`.
     static let nvidiaSignedRequirement = developerIdAnchor

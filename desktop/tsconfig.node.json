@@ -7,7 +7,7 @@
         "src/electron/**/*",
         "src/preload/**/*",
         "src/shared/**/*",
-        "electron-builder.config.ts",
+        "electron-builder*.config.ts",
         "scripts/windows-sign.js",
         "scripts/**/*.ts"
     ],

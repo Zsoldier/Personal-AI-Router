@@ -20,8 +20,8 @@ import (
 // pre-rename data directory on launch, so this tool does not search
 // alternative layouts.
 const (
-	appOrg         = "Nvidia Corporation"
-	appDataDir     = "Personal AI Router"
+	appOrg         = "Zsoldier"
+	appDataDir     = "PAIR"
 	logDirName     = "logs"
 	activeLogName  = "nvpair.jsonl"
 	rotatedLogName = "nvpair.1.jsonl"

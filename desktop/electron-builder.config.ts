@@ -431,16 +431,16 @@ const config: Configuration = {
         // sign loop (internal-build/signing/macos/sign.ts) also signs them.
         extraFiles: [
             {
-                from: 'native/build/com.nvidia.nvpair.helper',
-                to: 'MacOS/com.nvidia.nvpair.helper'
+                from: 'native/build/com.zsoldier.pair.privileged-helper',
+                to: 'MacOS/com.zsoldier.pair.privileged-helper'
             },
             {
                 from: 'native/build/nvpair-helper-ctl',
                 to: 'MacOS/nvpair-helper-ctl'
             },
             {
-                from: 'scripts/build/macos/com.nvidia.nvpair.helper.plist',
-                to: 'Library/LaunchDaemons/com.nvidia.nvpair.helper.plist'
+                from: 'scripts/build/macos/com.zsoldier.pair.privileged-helper.plist',
+                to: 'Library/LaunchDaemons/com.zsoldier.pair.privileged-helper.plist'
             }
         ]
     },

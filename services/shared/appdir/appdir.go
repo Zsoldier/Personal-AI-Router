@@ -4,7 +4,7 @@
 // Package appdir resolves the single per-user data directory for NVIDIA
 // Personal AI Router, so every component agrees on one location.
 //
-// Layout: <base>/Nvidia Corporation/Personal AI Router, where <base> is:
+// Layout: <base>/Zsoldier/PAIR, where <base> is:
 //   - Windows: %LocalAppData% (deliberately non-roaming — this is
 //     machine-specific state that must not sync across machines).
 //   - Linux:   $XDG_CONFIG_HOME or ~/.config.
@@ -19,8 +19,8 @@ import (
 
 const (
 	// orgDir / appDir are the two-level vendor/product path segments.
-	orgDir = "Nvidia Corporation"
-	appDir = "Personal AI Router"
+	orgDir = "Zsoldier"
+	appDir = "PAIR"
 )
 
 // Dir returns the per-user data directory, creating no files. It errors only

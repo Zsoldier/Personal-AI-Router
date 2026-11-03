@@ -80,10 +80,10 @@ for arg in "$@"; do
   esac
 done
 
-APP_ID=com.nvidia.nvpair
-APP_ORG="Nvidia Corporation"
-APP_DATA_DIR_NAME="Personal AI Router"
-APP_PREVIOUS_ORG="NVIDIA Corporation"
+APP_ID=com.zsoldier.pair
+APP_ORG="Zsoldier"
+APP_DATA_DIR_NAME="PAIR"
+APP_PREVIOUS_ORG="Zsoldier"
 APP_PREVIOUS_DATA_DIR_NAME=PAIR
 
 uname_s="$(uname -s 2>/dev/null || echo unknown)"
@@ -129,11 +129,11 @@ CONTROL_DIR="$RUNTIME_BASE/nvpair-$SCOPE"
 # Append-only target list (path|reason). Never remove entries — only append.
 TARGETS=()
 TARGETS+=("$CURRENT_ROOT|Current shared Electron + backend app data root")
-TARGETS+=("$LEGACY_ROOT|Legacy pre-rename app data root (NVIDIA Corporation/PAIR)")
-TARGETS+=("$CACHE_HOME/nvpair-updater|electron-updater download cache")
+TARGETS+=("$LEGACY_ROOT|Fork app data root")
+TARGETS+=("$CACHE_HOME/zsoldier-pair-updater|electron-updater download cache")
 TARGETS+=("$CONTROL_DIR|Removed CLI control socket directory and auth token")
-TARGETS+=("$HOME_DIR/.local/bin/nvpair|Generated Linux nvpair launcher")
-TARGETS+=("/usr/local/bin/nvpair|Generated macOS/Linux nvpair launcher (best-effort)")
+TARGETS+=("$HOME_DIR/.local/bin/zsoldier-pair|Generated Linux fork launcher")
+TARGETS+=("/usr/local/bin/zsoldier-pair|Generated macOS/Linux fork launcher (best-effort)")
 
 if [[ "$PLATFORM" == "darwin" ]]; then
   TARGETS+=("$HOME_DIR/Library/Preferences/${APP_ID}.plist|macOS preferences")
@@ -143,25 +143,6 @@ if [[ "$PLATFORM" == "darwin" ]]; then
   TARGETS+=("$HOME_DIR/Library/HTTPStorages/${APP_ID}.binarycookies|macOS HTTP cookies")
   TARGETS+=("$HOME_DIR/Library/WebKit/${APP_ID}|macOS WebKit storage")
 fi
-
-PAIR_PROCS=(
-  PAIR
-  nvpair-ui-broker
-  nvpair-proxy
-  # Pre-unification names, so this still cleans up after an older install.
-  ollama-proxy
-  lmstudio-proxy
-  nvpair-node-info
-  nvpair-node-scanner
-  nvpair-manual-nodes
-  nvpair-node-settings
-  nvpair-engine-manager
-  nvpair-workload-manager
-  nvpair-cluster-manager
-  nvpair-job-scheduler
-  nvpair-errors
-  nvpair-tui
-)
 
 if [[ "$DRY_RUN" -eq 1 ]]; then
   echo "[dry-run] Would remove ${#TARGETS[@]} path(s):"
@@ -189,11 +170,13 @@ if [[ -n "$WAIT_PID" ]]; then
 fi
 
 running_procs=()
-for proc in "${PAIR_PROCS[@]}"; do
-  if command -v pgrep >/dev/null 2>&1 && pgrep -x "$proc" >/dev/null 2>&1; then
-    running_procs+=("$proc")
-  fi
-done
+while read -r pid executable; do
+  case "$executable" in
+    *"/Zsoldier PAIR.app/Contents/"*|"$CURRENT_ROOT/"*)
+      running_procs+=("$pid")
+      ;;
+  esac
+done < <(ps -axo pid=,comm=)
 
 if [[ ${#running_procs[@]} -gt 0 && "$FORCE_KILL" -eq 0 ]]; then
   echo "NVIDIA PAIR appears to be running (${running_procs[*]})." >&2
@@ -203,8 +186,8 @@ fi
 
 if [[ ${#running_procs[@]} -gt 0 && "$FORCE_KILL" -eq 1 ]]; then
   echo "Stopping PAIR processes (--force-kill)..."
-  for proc in "${PAIR_PROCS[@]}"; do
-    pkill -TERM -x "$proc" 2>/dev/null || true
+  for pid in "${running_procs[@]}"; do
+    kill -TERM "$pid" 2>/dev/null || true
   done
   sleep 1
 fi

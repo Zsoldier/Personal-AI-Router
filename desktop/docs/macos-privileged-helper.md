@@ -5,6 +5,39 @@ SPDX-License-Identifier: Apache-2.0
 
 # macOS Privileged Helper (SMAppService)
 
+## Zsoldier fork build
+
+This fork installs as **Zsoldier PAIR.app** with bundle ID `com.zsoldier.pair`,
+helper ID `com.zsoldier.pair.privileged-helper`, and app data under
+`~/Library/Application Support/Zsoldier/PAIR`. It does not migrate NVIDIA PAIR's
+data or replace its `nvpair` command; the fork's command is `zsoldier-pair`.
+Both apps still use the standard PAIR network ports, so quit one before starting
+the other.
+
+To build the signed arm64 app and DMG using a Developer ID Application identity
+in the local Keychain and an existing `notarytool` Keychain profile:
+
+```sh
+cd desktop
+DEVELOPER_ID_APP="Developer ID Application: Your Name (U8A2AFWXCM)" \
+NOTARY_PROFILE="your-notary-profile" \
+npm run build:mac:fork:arm64
+```
+
+`electron-builder.fork.config.ts` signs nested code before the outer bundle,
+explicitly assigns both Swift helper identifiers, and verifies the full
+Developer ID requirements before submitting to Apple. This prevents the
+identifier mismatch reported in upstream issue #175. The helper pins Team ID
+`U8A2AFWXCM`; signing with another team requires changing that pin in
+`native/Shared/HelperProtocol.swift` and `scripts/build/macos/signing.ts`.
+The app and DMG must both pass notarization and stapling. Credentials stay in
+Keychain and are not written into the app or repository. Installers are written
+under `desktop/release/<version>/mac/`; building does not install or launch them.
+
+The standard public packaging commands remain unsigned.
+
+## Helper architecture
+
 Personal AI Router ships as a drag-to-install `.dmg` on macOS. A `.dmg` has **no installer
 step**, so adding the bundled networked binaries to the macOS Application
 Firewall runs on **first launch** through an Apple
@@ -15,14 +48,14 @@ LaunchDaemon bundled inside the `.app`.
 
 ## Components
 
-| Component             | Path in `.app`                                                  | Language | Role                                                                                                                                         |
-| --------------------- | --------------------------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| Daemon                | `Contents/MacOS/com.nvidia.nvpair.helper`                       | Swift    | Runs as **root** under launchd; vends a fixed XPC command surface; applies `socketfilterfw` rules.                                           |
-| Control tool          | `Contents/MacOS/nvpair-helper-ctl`                              | Swift    | User-context CLI Electron spawns; registers/unregisters the daemon via `SMAppService`; relays XPC requests; prints one JSON object per call. |
-| LaunchDaemon plist    | `Contents/Library/LaunchDaemons/com.nvidia.nvpair.helper.plist` | plist    | launchd config: `Label`, `BundleProgram`, `MachServices`, `AssociatedBundleIdentifiers`.                                                     |
-| Shared protocol       | `native/Shared/HelperProtocol.swift`                            | Swift    | Compiled into **both** binaries so the XPC interface + security constants never drift.                                                       |
-| `MacPrivilegeService` | `src/electron/services/mac-privilege-service.ts`                | TS       | UI-free wrapper; the only path Electron uses to drive the helper.                                                                            |
-| Lifecycle wiring      | `src/electron/main.ts` (`runMacPrivilegedSetup`)                | TS       | First-run dialog + `ensureConfigured()` at `app.whenReady`; one-time gate in `ui-config.ts`.                                                 |
+| Component             | Path in `.app`                                                             | Language | Role                                                                                                                                         |
+| --------------------- | -------------------------------------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Daemon                | `Contents/MacOS/com.zsoldier.pair.privileged-helper`                       | Swift    | Runs as **root** under launchd; vends a fixed XPC command surface; applies `socketfilterfw` rules.                                           |
+| Control tool          | `Contents/MacOS/nvpair-helper-ctl`                                         | Swift    | User-context CLI Electron spawns; registers/unregisters the daemon via `SMAppService`; relays XPC requests; prints one JSON object per call. |
+| LaunchDaemon plist    | `Contents/Library/LaunchDaemons/com.zsoldier.pair.privileged-helper.plist` | plist    | launchd config: `Label`, `BundleProgram`, `MachServices`, `AssociatedBundleIdentifiers`.                                                     |
+| Shared protocol       | `native/Shared/HelperProtocol.swift`                                       | Swift    | Compiled into **both** binaries so the XPC interface + security constants never drift.                                                       |
+| `MacPrivilegeService` | `src/electron/services/mac-privilege-service.ts`                           | TS       | UI-free wrapper; the only path Electron uses to drive the helper.                                                                            |
+| Lifecycle wiring      | `src/electron/main.ts` (`runMacPrivilegedSetup`)                           | TS       | First-run dialog + `ensureConfigured()` at `app.whenReady`; one-time gate in `ui-config.ts`.                                                 |
 
 Both Mach-O binaries sit in `Contents/MacOS/` so the control tool's `Bundle.main`
 resolves to the host `.app` (required by `SMAppService.daemon(plistName:)`).
@@ -34,7 +67,7 @@ flowchart TD
     Main["Electron main (main.ts whenReady)"] --> MPS["MacPrivilegeService (TS)"]
     MPS -->|"spawn JSON CLI"| Ctl["nvpair-helper-ctl (Swift, in .app)"]
     Ctl -->|"SMAppService.daemon().register()"| SM["launchd (root)"]
-    SM --> Daemon["com.nvidia.nvpair.helper (Swift daemon, root)"]
+    SM --> Daemon["com.zsoldier.pair.privileged-helper (Swift daemon, root)"]
     Ctl -->|"XPC Mach service"| Daemon
     Daemon -->|"socketfilterfw --add/--unblockapp"| FW["Application Firewall"]
 ```
@@ -95,7 +128,7 @@ The set in `native/PrivilegedHelper/main.swift` must stay in sync with the
 ## Security
 
 Code-signing requirements are pinned (constants in `HelperProtocol.swift`, Team
-ID `6KR3T733EC`). Each shares a common `developerIdAnchor`: `anchor apple
+ID `U8A2AFWXCM`). Each shares a common `developerIdAnchor`: `anchor apple
 generic` **plus** the Developer ID intermediate marker
 (`certificate 1[field.1.2.840.113635.100.6.2.6]`), the Developer ID Application
 leaf marker (`certificate leaf[field.1.2.840.113635.100.6.1.13]`), and the Team
@@ -107,11 +140,11 @@ requirement.
 <developerIdAnchor>`. The daemon pins this on every **inbound** XPC connection
   (`setCodeSigningRequirement`), so only the control tool — pinned by signing
   identifier, not merely Team ID — can drive privileged ops.
-- **`daemonCodeSigningRequirement`** — `identifier "com.nvidia.nvpair.helper" and
+- **`daemonCodeSigningRequirement`** — `identifier "com.zsoldier.pair.privileged-helper" and
 <developerIdAnchor>`. The control tool pins this on its **outbound** connection
   so a hijacked Mach service name cannot answer.
 - **`appCodeSigningRequirement`** — `identifier
-"com.nvidia.nvpair" and <developerIdAnchor>`, used to
+"com.zsoldier.pair" and <developerIdAnchor>`, used to
   re-verify the target bundle.
 
 **Confused-deputy fix.** The daemon no longer trusts an `--app-path` argument.
@@ -120,7 +153,7 @@ process**: it resolves the caller's `SecCode` from its PID, checks it against
 `ctlCodeSigningRequirement`, and reads the control tool's own path — the `.app`
 is its grandparent-of-`Contents/MacOS`. A caller can therefore only ever
 configure **its own** bundle, never point the daemon at an arbitrary
-NVIDIA-signed `.app`.
+fork-signed `.app`.
 
 **TOCTOU / symlink hardening.** Before mutating firewall state the daemon
 re-validates the derived bundle: reject path traversal, reject a symlinked
@@ -128,7 +161,7 @@ re-validates the derived bundle: reject path traversal, reject a symlinked
 group/other-writable ancestor directories, and verify the bundle signature
 against `appCodeSigningRequirement`. Immediately before each `socketfilterfw`
 invocation it re-opens the individual binary with `O_NOFOLLOW` and re-verifies
-that binary's own NVIDIA signature, and it now **fails** (rather than ignoring)
+that binary's own fork signature, and it now **fails** (rather than ignoring)
 any non-zero `socketfilterfw` exit.
 
 ## Build & signing

@@ -13,7 +13,7 @@
  * binary so the same artifact ships in both the x64 and arm64 `.app`s.
  *
  * Outputs (referenced verbatim by electron-builder.config.ts mac.extraFiles):
- *   native/build/com.nvidia.nvpair.helper   (the root daemon)
+ *   native/build/com.zsoldier.pair.privileged-helper   (the root daemon)
  *   native/build/nvpair-helper-ctl          (the user-context control tool)
  */
 
@@ -29,7 +29,7 @@ const SHARED_DIR = path.join(NATIVE_DIR, 'Shared')
 const DAEMON_DIR = path.join(NATIVE_DIR, 'PrivilegedHelper')
 const CTL_DIR = path.join(NATIVE_DIR, 'HelperControl')
 
-const DAEMON_OUTPUT = 'com.nvidia.nvpair.helper'
+const DAEMON_OUTPUT = 'com.zsoldier.pair.privileged-helper'
 const CTL_OUTPUT = 'nvpair-helper-ctl'
 const ARCHS = ['arm64', 'x86_64'] as const
 const DEPLOYMENT_TARGET = '13.0'

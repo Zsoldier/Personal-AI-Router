@@ -92,10 +92,10 @@ if ($ShowHelp) {
     exit 0
 }
 
-$AppId = 'com.nvidia.nvpair'
-$AppOrg = 'Nvidia Corporation'
-$AppDataDirName = 'Personal AI Router'
-$PreviousOrg = 'NVIDIA Corporation'
+$AppId = 'com.zsoldier.pair'
+$AppOrg = 'Zsoldier'
+$AppDataDirName = 'PAIR'
+$PreviousOrg = 'Zsoldier'
 $PreviousDataDirName = 'PAIR'
 
 $LocalAppData = $env:LOCALAPPDATA
@@ -127,9 +127,9 @@ $ControlDir = Join-Path $Tmp "nvpair-$Scope"
 # Append-only target list. Never remove entries — only append.
 $Targets = @(
     @{ Path = $CurrentRoot; Reason = 'Current shared Electron + backend app data root' },
-    @{ Path = $LegacyRoot; Reason = 'Legacy pre-rename app data root (NVIDIA Corporation/PAIR)' },
-    @{ Path = (Join-Path $LocalAppData 'nvpair-updater'); Reason = 'electron-updater download cache (Windows)' },
-    @{ Path = (Join-Path $CurrentRoot (Join-Path 'bin' 'nvpair.cmd')); Reason = 'Generated Windows nvpair launcher under userData' },
+    @{ Path = $LegacyRoot; Reason = 'Fork app data root' },
+    @{ Path = (Join-Path $LocalAppData 'zsoldier-pair-updater'); Reason = 'electron-updater download cache (Windows)' },
+    @{ Path = (Join-Path $CurrentRoot (Join-Path 'bin' 'zsoldier-pair.cmd')); Reason = 'Generated Windows fork launcher under userData' },
     @{ Path = $ControlDir; Reason = 'Removed CLI control token directory' }
 )
 
@@ -155,8 +155,13 @@ $PairProcs = @(
 function Test-PairProcessRunning([string]$Name) {
     $image = if ($Name -eq 'PAIR') { 'PAIR.exe' } else { "$Name.exe" }
     try {
-        $out = & tasklist /FI "IMAGENAME eq $image" /NH 2>$null | Out-String
-        return ($out -match [regex]::Escape($image))
+        $matches = @(Get-CimInstance Win32_Process | Where-Object {
+            $_.Name -eq $image -and $_.ExecutablePath -and (
+                $_.ExecutablePath -like "$env:LOCALAPPDATA\Zsoldier\PAIR\*" -or
+                $_.ExecutablePath -like "$env:ProgramFiles\Zsoldier PAIR\*"
+            )
+        })
+        return $matches.Count -gt 0
     } catch {
         return $false
     }
@@ -205,18 +210,14 @@ if ($running.Count -gt 0 -and $ForceKill) {
     $killScript = @'
 Get-CimInstance Win32_Process | Where-Object {
   $_.ExecutablePath -and (
-    $_.ExecutablePath -like "$env:LOCALAPPDATA\NVIDIA Corporation\PAIR\*" -or
-    $_.ExecutablePath -like "$env:LOCALAPPDATA\Nvidia Corporation\Personal AI Router\*"
+    $_.ExecutablePath -like "$env:LOCALAPPDATA\Zsoldier\PAIR\*" -or
+    $_.ExecutablePath -like "$env:ProgramFiles\Zsoldier PAIR\*"
   )
 } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 '@
     try {
         powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command $killScript | Out-Null
     } catch { }
-    foreach ($proc in $PairProcs) {
-        $image = if ($proc -eq 'PAIR') { 'PAIR.exe' } else { "$proc.exe" }
-        try { & taskkill /F /IM $image 2>$null | Out-Null } catch { }
-    }
     Start-Sleep -Seconds 1
 }
 

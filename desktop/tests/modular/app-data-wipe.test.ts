@@ -31,12 +31,12 @@ describe('repo-root wipe scripts', () => {
         const shText = fs.readFileSync(sh, 'utf8')
         const psText = fs.readFileSync(ps1, 'utf8')
         for (const text of [shText, psText]) {
-            expect(text).toContain('Nvidia Corporation')
-            expect(text).toContain('Personal AI Router')
-            expect(text).toContain('NVIDIA Corporation')
+            expect(text).toContain('Zsoldier')
+            expect(text).not.toContain('Nvidia Corporation')
+            expect(text).not.toContain('NVIDIA Corporation/PAIR')
             expect(text).toContain('PAIR')
             expect(text).toContain('APPEND-ONLY')
-            expect(text).toContain('nvpair-updater')
+            expect(text).toContain('zsoldier-pair-updater')
         }
     })
 
@@ -53,7 +53,8 @@ describe('repo-root wipe scripts', () => {
         const result = spawnSync('bash', [sh, '--dry-run'], { encoding: 'utf8' })
         expect(result.status).toBe(0)
         expect(result.stdout).toContain('[dry-run]')
-        expect(result.stdout).toContain('Personal AI Router')
+        expect(result.stdout).toContain('Zsoldier/PAIR')
+        expect(result.stdout).not.toContain('Nvidia Corporation')
     })
 
     itUnix('unix script aborts when the app process never exits', () => {
